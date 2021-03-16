@@ -3,7 +3,7 @@ import React from 'react';
 import './EventItem.css';
 
 const eventItem = props => (
-  <li key={props.eventId} className="events__list-item">
+  <li key={props.key} className="events__list-item">
     <div>
       <h1>{props.title}</h1>
       <h2>

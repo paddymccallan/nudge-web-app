@@ -5,14 +5,15 @@ import AuthContext from '../context/auth-context';
 
 class AuthPage extends Component {
   state = {
-    isLogin: true
+    isLogin: true,
+    hostUrl: window.location.href.indexOf('localhost') >-1 ? 'https://localhost:44347' : 'https://nudgeapi.herokuapp.com'
   };
 
   static contextType = AuthContext;
 
   constructor(props) {
     super(props);
-    this.emailEl = React.createRef();
+    this.usernameE1 = React.createRef();
     this.passwordEl = React.createRef();
   }
 
@@ -24,52 +25,29 @@ class AuthPage extends Component {
 
   submitHandler = event => {
     event.preventDefault();
-    const email = this.emailEl.current.value;
+    const username = this.usernameE1.current.value;
     const password = this.passwordEl.current.value;
 
-    if (email.trim().length === 0 || password.trim().length === 0) {
+    if (username.trim().length === 0 || password.trim().length === 0) {
       return;
     }
 
-    let requestBody = {
-      query: `
-        query Login($email: String!, $password: String!) {
-          login(email: $email, password: $password) {
-            userId
-            token
-            tokenExpiration
-          }
-        }
-      `,
-      variables: {
-        email: email,
-        password: password
-      }
+    let requestBody = {//login 
+      "Username": username,
+      "Password": password,
     };
 
-    if (!this.state.isLogin) {
-      requestBody = {
-        query: `
-          mutation CreateUser($email: String!, $password: String!) {
-            createUser(userInput: {email: $email, password: $password}) {
-              _id
-              email
-            }
-          }
-        `,
-        variables: {
-          email: email,
-          password: password
-        }
-      };
+    if (!this.state.isLogin) {//register user
+      requestBody = JSON.stringify({
+          "Username": username,
+          "Password": password,
+        });
     }
 
-    fetch('http://localhost:8000/graphql', {
+    fetch(this.state.isLogin ? this.state.hostUrl+'/api/User/Authenticate' : this.state.hostUrl+'/api/User/Register', {
       method: 'POST',
       body: JSON.stringify(requestBody),
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With':'XMLHttpRequest'},
     })
       .then(res => {
         if (res.status !== 200 && res.status !== 201) {
@@ -78,12 +56,26 @@ class AuthPage extends Component {
         return res.json();
       })
       .then(resData => {
-        if (resData.data.login.token) {
-          this.context.login(
-            resData.data.login.token,
-            resData.data.login.userId,
-            resData.data.login.tokenExpiration
-          );
+        if (resData !== null) {
+          fetch(this.state.hostUrl+'/api/User/GetLoggedInUser', {
+            method: 'GET',      
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With':'XMLHttpRequest', 'Authorization': 'Bearer ' + resData},           
+          }).then(r =>{
+            if (r.status !== 200 && r.status !== 201) {
+              throw new Error('Failed!');
+            }
+            return r.json();
+          }).then(r1 => {
+            if(r1 !== null){
+              this.context.login(
+                r1.Id,
+                r1.UserName,
+                resData
+             );
+            }
+          }).catch(err => {
+            console.log(err);
+          });      
         }
       })
       .catch(err => {
@@ -95,8 +87,8 @@ class AuthPage extends Component {
     return (
       <form className="auth-form" onSubmit={this.submitHandler}>
         <div className="form-control">
-          <label htmlFor="email">E-Mail</label>
-          <input type="email" id="email" ref={this.emailEl} />
+          <label htmlFor="email">username</label>
+          <input type="text" id="email" ref={this.usernameE1} />
         </div>
         <div className="form-control">
           <label htmlFor="password">Password</label>

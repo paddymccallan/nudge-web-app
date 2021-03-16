@@ -9,7 +9,7 @@ import BookingsControls from '../components/Bookings/BookingsControls/BookingsCo
 class BookingsPage extends Component {
   state = {
     isLoading: false,
-    bookings: [],
+    activeNudges: [],
     outputType: 'list'
   };
 
@@ -21,26 +21,9 @@ class BookingsPage extends Component {
 
   fetchBookings = () => {
     this.setState({ isLoading: true });
-    const requestBody = {
-      query: `
-          query {
-            bookings {
-              _id
-             createdAt
-             event {
-               _id
-               title
-               date
-               price
-             }
-            }
-          }
-        `
-    };
 
-    fetch('http://localhost:8000/graphql', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
+    fetch('https://cors-anywhere.herokuapp.com/https://nudgeapi.herokuapp.com/api/Nudge/GetMyActiveNudges', {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         Authorization: 'Bearer ' + this.context.token
@@ -53,8 +36,8 @@ class BookingsPage extends Component {
         return res.json();
       })
       .then(resData => {
-        const bookings = resData.data.bookings;
-        this.setState({ bookings: bookings, isLoading: false });
+        const activeNudges = resData;
+        this.setState({ activeNudges: activeNudges, isLoading: false });
       })
       .catch(err => {
         console.log(err);
@@ -126,11 +109,11 @@ class BookingsPage extends Component {
           <div>
             {this.state.outputType === 'list' ? (
               <BookingList
-                bookings={this.state.bookings}
+                bookings={this.state.activeNudges}
                 onDelete={this.deleteBookingHandler}
               />
             ) : (
-              <BookingsChart bookings={this.state.bookings} />
+              <BookingsChart bookings={this.state.activeNudges} />
             )}
           </div>
         </React.Fragment>

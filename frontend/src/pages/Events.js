@@ -10,9 +10,11 @@ import './Events.css';
 class EventsPage extends Component {
   state = {
     creating: false,
-    events: [],
+    pendingNudges: [],
+    activeNudges: [],
     isLoading: false,
-    selectedEvent: null
+    selectedEvent: null,
+    hostUrl: window.location.href.indexOf('localhost') >-1 ? 'https://localhost:44347' : 'https://nudgeapi.herokuapp.com'
   };
   isActive = true;
 
@@ -21,13 +23,16 @@ class EventsPage extends Component {
   constructor(props) {
     super(props);
     this.titleElRef = React.createRef();
-    this.priceElRef = React.createRef();
-    this.dateElRef = React.createRef();
-    this.descriptionElRef = React.createRef();
+    this.messageRef = React.createRef();
+    this.categoryRef = React.createRef();
+    this.almsmanRef = React.createRef();
+    this.amountRef = React.createRef();
+    this.returnDateElRef = React.createRef();
   }
 
   componentDidMount() {
-    this.fetchEvents();
+    this.fetchActiveNudges();
+    this.fetchPendingNudges();
   }
 
   startCreateEventHandler = () => {
@@ -37,50 +42,49 @@ class EventsPage extends Component {
   modalConfirmHandler = () => {
     this.setState({ creating: false });
     const title = this.titleElRef.current.value;
-    const price = +this.priceElRef.current.value;
-    const date = this.dateElRef.current.value;
-    const description = this.descriptionElRef.current.value;
+    const message = this.messageRef.current.value;
+    const category = this.categoryRef.current.value;
+    const almsman = this.almsmanRef.current.value;
+    const amount = this.amountRef.current.value;
+    const returnDate = this.returnDateElRef.current.value;
 
     if (
       title.trim().length === 0 ||
-      price <= 0 ||
-      date.trim().length === 0 ||
-      description.trim().length === 0
+      amount <= 0 ||
+      returnDate.trim().length === 0 ||
+      message.trim().length === 0
     ) {
       return;
     }
 
-    const event = { title, price, date, description };
+    const event = { title, message, category, almsman, amount, returnDate };
     console.log(event);
 
     const requestBody = {
-      query: `
-          mutation CreateEvent($title: String!, $desc: String!, $price: Float!, $date: String!) {
-            createEvent(eventInput: {title: $title, description: $desc, price: $price, date: $date}) {
-              _id
-              title
-              description
-              date
-              price
-            }
-          }
-        `,
-        variables: {
-          title: title,
-          desc: description,
-          price: price,
-          date: date
-        }
+      "Title": title,
+      "Message": message,
+      "Category": category,
+      "Almsman": {
+        "UserName": this.context.username
+      },
+      "Donor": {
+        "UserName": almsman//change this ref to donor!!
+      },
+      "Transaction": {
+        "TransactionRequestTime": new Date().toISOString(),
+        "TransactionAmount": amount
+      },
+      "ReturnDate": returnDate
     };
 
     const token = this.context.token;
 
-    fetch('http://localhost:8000/graphql', {
+    fetch('api/Nudge/StartNudgeRequest', {
       method: 'POST',
       body: JSON.stringify(requestBody),
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token
+        'Authorization': 'Bearer ' + token
       }
     })
       .then(res => {
@@ -91,21 +95,32 @@ class EventsPage extends Component {
       })
       .then(resData => {
         this.setState(prevState => {
-          const updatedEvents = [...prevState.events];
-          updatedEvents.push({
-            _id: resData.data.createEvent._id,
-            title: resData.data.createEvent.title,
-            description: resData.data.createEvent.description,
-            date: resData.data.createEvent.date,
-            price: resData.data.createEvent.price,
-            creator: {
-              _id: this.context.userId
-            }
+          const updatedNudges = [...prevState.pendingNudges];
+          updatedNudges.push({
+            _id: "",
+            title: title,
+            message: message,
+            returnDate: returnDate,
+            amount: amount,
+            almsman: almsman
           });
-          return { events: updatedEvents };
+          return { pendingNudges: updatedNudges };
         });
       })
       .catch(err => {
+        //at the minute were getting a 404 because we arent creating the nudge id before returning it. For now add nudge to stack anyway
+        this.setState(prevState => {
+          const updatedNudges = [...prevState.pendingNudges];
+          updatedNudges.push({
+            _id: "",
+            title: title,
+            message: message,
+            returnDate: returnDate,
+            amount: amount,
+            almsman: almsman
+          });
+          return { pendingNudges: updatedNudges };
+        });
         console.log(err);
       });
   };
@@ -114,31 +129,15 @@ class EventsPage extends Component {
     this.setState({ creating: false, selectedEvent: null });
   };
 
-  fetchEvents() {
+  fetchActiveNudges() {
     this.setState({ isLoading: true });
-    const requestBody = {
-      query: `
-          query {
-            events {
-              _id
-              title
-              description
-              date
-              price
-              creator {
-                _id
-                email
-              }
-            }
-          }
-        `
-    };
-
-    fetch('http://localhost:8000/graphql', {
-      method: 'POST',
-      body: JSON.stringify(requestBody),
+    console.log(this.context);
+    const token = this.context.token;
+    fetch(this.state.hostUrl + 'api/Nudge/GetMyActiveNudges', {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
       }
     })
       .then(res => {
@@ -148,9 +147,37 @@ class EventsPage extends Component {
         return res.json();
       })
       .then(resData => {
-        const events = resData.data.events;
+        const activeNudges = resData;
         if (this.isActive) {
-          this.setState({ events: events, isLoading: false });
+          this.setState({ activeNudges: activeNudges, isLoading: false });
+        }
+      })
+      .catch(err => {
+        console.log(err);
+        if (this.isActive) {
+          this.setState({ isLoading: false });
+        }
+      });
+  }
+
+  fetchPendingNudges() {
+    this.setState({ isLoading: true });
+    console.log(this.context);
+    const token = this.context.token;
+    fetch(this.state.hostUrl +'/api/Nudge/GetMyPendingNudges', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With':'XMLHttpRequest', 'Authorization': 'Bearer ' + token},           
+    })
+      .then(res => {
+        if (res.status !== 200 && res.status !== 201) {
+          throw new Error('Failed!');
+        }
+        return res.json();
+      })
+      .then(resData => {
+        const pendingNudges = resData;
+        if (this.isActive) {
+          this.setState({ pendingNudges: pendingNudges, isLoading: false });
         }
       })
       .catch(err => {
@@ -163,7 +190,7 @@ class EventsPage extends Component {
 
   showDetailHandler = eventId => {
     this.setState(prevState => {
-      const selectedEvent = prevState.events.find(e => e._id === eventId);
+      const selectedEvent = prevState.pendingNudges.find(e => e.Transaction.Id === eventId);
       return { selectedEvent: selectedEvent };
     });
   };
@@ -222,7 +249,7 @@ class EventsPage extends Component {
         {(this.state.creating || this.state.selectedEvent) && <Backdrop />}
         {this.state.creating && (
           <Modal
-            title="Add Event"
+            title="Add Nudge"
             canCancel
             canConfirm
             onCancel={this.modalCancelHandler}
@@ -235,20 +262,24 @@ class EventsPage extends Component {
                 <input type="text" id="title" ref={this.titleElRef} />
               </div>
               <div className="form-control">
-                <label htmlFor="price">Price</label>
-                <input type="number" id="price" ref={this.priceElRef} />
+                <label htmlFor="title">Message</label>
+                <input type="text" id="title" ref={this.messageRef} />
               </div>
               <div className="form-control">
-                <label htmlFor="date">Date</label>
-                <input type="datetime-local" id="date" ref={this.dateElRef} />
+                <label htmlFor="title">Category</label>
+                <input type="text" id="title" ref={this.categoryRef} />
               </div>
               <div className="form-control">
-                <label htmlFor="description">Description</label>
-                <textarea
-                  id="description"
-                  rows="4"
-                  ref={this.descriptionElRef}
-                />
+                <label htmlFor="price">Amount</label>
+                <input type="number" id="price" ref={this.amountRef} />
+              </div>
+              <div className="form-control">
+                <label htmlFor="date">Return Date</label>
+                <input type="datetime-local" id="date" ref={this.returnDateElRef} />
+              </div>
+              <div className="form-control">
+                <label htmlFor="title">Almsman</label>
+                <input type="text" id="title" ref={this.almsmanRef} />
               </div>
             </form>
           </Modal>
@@ -282,7 +313,7 @@ class EventsPage extends Component {
           <Spinner />
         ) : (
           <EventList
-            events={this.state.events}
+            items={this.state.pendingNudges}
             authUserId={this.context.userId}
             onViewDetail={this.showDetailHandler}
           />

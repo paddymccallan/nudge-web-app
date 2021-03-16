@@ -4,16 +4,14 @@ import EventItem from './EventItem/EventItem';
 import './EventList.css';
 
 const eventList = props => {
-  const events = props.events.map(event => {
+  const events = props.items.map(event => {
     return (
       <EventItem
-        key={event._id}
-        eventId={event._id}
+        key={event.Transaction.Id}//need to get some id back from server // TODO
         title={event.title}
-        price={event.price}
-        date={event.date}
+        price={event.Transaction.TransactionAmount}
+        date={event.ReturnDate}
         userId={props.authUserId}
-        creatorId={event.creator._id}
         onDetail={props.onViewDetail}
       />
     );
