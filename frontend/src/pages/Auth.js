@@ -5,7 +5,8 @@ import AuthContext from '../context/auth-context';
 
 class AuthPage extends Component {
   state = {
-    isLogin: true,
+    user: null,
+    isLogin: false,//check local storage to set initial state
     hostUrl: window.location.href.indexOf('localhost') >-1 ? 'https://localhost:44347' : 'https://nudgeapi.herokuapp.com'
   };
 
@@ -15,6 +16,17 @@ class AuthPage extends Component {
     super(props);
     this.usernameE1 = React.createRef();
     this.passwordEl = React.createRef();
+  }
+
+  componentDidMount = () => {
+    let user = localStorage.getItem('user');
+    const shouldBeLoggedIn = user !== null ? true : false;
+    if(shouldBeLoggedIn) {
+      console.log(user);
+      user = JSON.parse(user);
+      this.context.login(user.userId, user.username, user.token)
+    }
+    this.setState({user: user, isLogin: shouldBeLoggedIn });
   }
 
   switchModeHandler = () => {
@@ -72,6 +84,13 @@ class AuthPage extends Component {
                 r1.UserName,
                 resData
              );
+             const user = {
+               userId: r1.Id,
+               username: r1.UserName,
+               token: resData
+             }
+             //add user to local storage
+             localStorage.setItem('user', JSON.stringify(user));//could add a 'remember me ternary here'
             }
           }).catch(err => {
             console.log(err);

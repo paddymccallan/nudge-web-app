@@ -133,7 +133,7 @@ class EventsPage extends Component {
     this.setState({ isLoading: true });
     console.log(this.context);
     const token = this.context.token;
-    fetch(this.state.hostUrl + 'api/Nudge/GetMyActiveNudges', {
+    fetch(this.state.hostUrl + '/api/Nudge/GetMyActiveNudges', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -285,30 +285,35 @@ class EventsPage extends Component {
           </Modal>
         )}
         {this.state.selectedEvent && (
+          <div className="d-flex justify-content-center">
           <Modal
-            title={this.state.selectedEvent.title}
+            title="Your Nudge Request"
             canCancel
             canConfirm
             onCancel={this.modalCancelHandler}
             onConfirm={this.bookEventHandler}
-            confirmText={this.context.token ? 'Book' : 'Confirm'}
+            confirmText={'Cancel nudge request'}
           >
-            <h1>{this.state.selectedEvent.title}</h1>
-            <h2>
-              ${this.state.selectedEvent.price} -{' '}
-              {new Date(this.state.selectedEvent.date).toLocaleDateString()}
-            </h2>
-            <p>{this.state.selectedEvent.description}</p>
+            <h1>{this.state.selectedEvent.Title}</h1>
+            <h3>
+              You have requested a nudge to {this.state.selectedEvent.Donor.UserName} of the amount of £{this.state.selectedEvent.Transaction.TransactionAmount} and have confirmed it to be returned on or before{' '}
+              {new Date(this.state.selectedEvent.Transaction.TransactionRequestTime).toLocaleDateString()}
+            </h3>
+            <p>{this.state.selectedEvent.Message}</p>
+            <p className="text-muted">{this.state.selectedEvent.Donor.UserName} still has not confirmed this request, so you can still cancel it.</p>
           </Modal>
+          </div>
         )}
+        <div className="container">
         {this.context.token && (
-          <div className="events-control">
-            <p>Share your own Events!</p>
+          <div className="events-control col col-lg-2">
+            <p>Create a new nudge!</p>
             <button className="btn" onClick={this.startCreateEventHandler}>
-              Create Event
+              Create request
             </button>
           </div>
         )}
+        {/* pending nudges list */}
         {this.state.isLoading ? (
           <Spinner />
         ) : (
@@ -318,6 +323,17 @@ class EventsPage extends Component {
             onViewDetail={this.showDetailHandler}
           />
         )}
+        {/* Active nudges list */}
+        {this.state.isLoading ? (
+          <Spinner />
+        ) : (
+          <EventList
+            items={this.state.activeNudges}
+            authUserId={this.context.userId}
+            onViewDetail={this.showDetailHandler}
+          />
+        )}
+        </div>
       </React.Fragment>
     );
   }

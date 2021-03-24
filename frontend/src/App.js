@@ -16,11 +16,22 @@ class App extends Component {
     username: null
   };
 
+  componentDidMount = () => {
+    let user = localStorage.getItem('user');
+    const shouldBeLoggedIn = user !== null ? true : false;
+    if(shouldBeLoggedIn) {
+      user = JSON.parse(user);
+      this.login(user.userId, user.username, user.token)
+    }
+  }
+
+
   login = (userId, username, token) => {
     this.setState({ token: token, userId: userId, username: username });
   };
 
   logout = () => {
+    localStorage.removeItem('user');
     this.setState({ token: null, userId: null, username: null });
   };
 
@@ -47,7 +58,9 @@ class App extends Component {
                 {!this.state.token && (
                   <Route path="/auth" component={AuthPage} />
                 )}
-                <Route path="/events" component={EventsPage} />
+                {this.state.token && (
+                  <Route path="/events" component={EventsPage} />
+                )}
                 {this.state.token && (
                   <Route path="/bookings" component={BookingsPage} />
                 )}
