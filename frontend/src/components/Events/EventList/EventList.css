@@ -6,3 +6,11 @@
     list-style: none;
     padding: 0;
   }
+
+  .outgoing{
+    background-color: green;
+  }
+
+  .incoming{
+    background-color: red;
+  }

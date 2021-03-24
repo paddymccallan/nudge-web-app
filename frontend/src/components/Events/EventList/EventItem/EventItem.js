@@ -3,7 +3,7 @@ import React from 'react';
 import './EventItem.css';
 
 const eventItem = props => (
-  <li key={props.uniqueId} className="events__list-item">
+  <li key={props.uniqueId} className={ props.donor == props.username ?  "events__list-item outgoing" : "events__list-item incoming"}>
     <div>
       <h1>{props.title}</h1>
       <h2>

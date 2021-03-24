@@ -290,9 +290,10 @@ class EventsPage extends Component {
             title="Your Nudge Request"
             canCancel
             canConfirm
+            outgoing={this.state.selectedEvent.Donor.UserName != this.context.username}
             onCancel={this.modalCancelHandler}
             onConfirm={this.bookEventHandler}
-            confirmText={'Cancel nudge request'}
+            confirmText={this.state.selectedEvent.Donor.UserName == this.context.username ? "Confirm nudge" : "Cancel Nudge"}
           >
             <h1>{this.state.selectedEvent.Title}</h1>
             <h3>
@@ -320,6 +321,7 @@ class EventsPage extends Component {
           <EventList
             items={this.state.pendingNudges}
             authUserId={this.context.userId}
+            authUsername={this.context.username}
             onViewDetail={this.showDetailHandler}
           />
         )}
@@ -330,6 +332,7 @@ class EventsPage extends Component {
           <EventList
             items={this.state.activeNudges}
             authUserId={this.context.userId}
+            authUsername={this.context.username}
             onViewDetail={this.showDetailHandler}
           />
         )}

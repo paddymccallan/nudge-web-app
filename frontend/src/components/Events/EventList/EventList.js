@@ -12,6 +12,8 @@ const eventList = props => {
         price={event.Transaction.TransactionAmount}
         date={event.ReturnDate}
         userId={props.authUserId}
+        donor={event.Donor.UserName}
+        username={props.authUsername}
         onDetail={props.onViewDetail}
         uniqueId={event.Transaction.Id}
       />
