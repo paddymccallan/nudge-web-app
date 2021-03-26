@@ -14,7 +14,7 @@ class EventsPage extends Component {
     activeNudges: [],
     isLoading: false,
     selectedEvent: null,
-    hostUrl: window.location.href.indexOf('localhost') >-1 ? 'https://localhost:44347' : 'https://nudgeapi.herokuapp.com'
+    hostUrl: window.location.href.indexOf('localhost') >-1 ? 'https://localhost:44347/' : 'https://nudgeapi.herokuapp.com/'
   };
   isActive = true;
 
@@ -25,7 +25,7 @@ class EventsPage extends Component {
     this.titleElRef = React.createRef();
     this.messageRef = React.createRef();
     this.categoryRef = React.createRef();
-    this.almsmanRef = React.createRef();
+    this.donorRef = React.createRef();
     this.amountRef = React.createRef();
     this.returnDateElRef = React.createRef();
   }
@@ -44,7 +44,8 @@ class EventsPage extends Component {
     const title = this.titleElRef.current.value;
     const message = this.messageRef.current.value;
     const category = this.categoryRef.current.value;
-    const almsman = this.almsmanRef.current.value;
+    const donor = this.donorRef.current.value;
+
     const amount = this.amountRef.current.value;
     const returnDate = this.returnDateElRef.current.value;
 
@@ -57,7 +58,7 @@ class EventsPage extends Component {
       return;
     }
 
-    const event = { title, message, category, almsman, amount, returnDate };
+    const event = { title, message, category, donor, amount, returnDate };
     console.log(event);
 
     const requestBody = {
@@ -68,7 +69,7 @@ class EventsPage extends Component {
         "UserName": this.context.username
       },
       "Donor": {
-        "UserName": almsman//change this ref to donor!!
+        "UserName": donor
       },
       "Transaction": {
         "TransactionRequestTime": new Date().toISOString(),
@@ -79,7 +80,7 @@ class EventsPage extends Component {
 
     const token = this.context.token;
 
-    fetch('api/Nudge/StartNudgeRequest', {
+    fetch(this.state.hostUrl +'api/Nudge/StartNudgeRequest', {
       method: 'POST',
       body: JSON.stringify(requestBody),
       headers: {
@@ -100,9 +101,20 @@ class EventsPage extends Component {
             _id: "",
             title: title,
             message: message,
+            category: category,
             returnDate: returnDate,
             amount: amount,
-            almsman: almsman
+            donor: {
+              username: donor
+            },
+            almsman: {
+              username: this.context.username
+            },
+            transaction: {
+              transactionRequestTime: new Date().toISOString(),
+              transactionAmount: amount
+            },
+            returnDate: returnDate       
           });
           return { pendingNudges: updatedNudges };
         });
@@ -117,7 +129,7 @@ class EventsPage extends Component {
             message: message,
             returnDate: returnDate,
             amount: amount,
-            almsman: almsman
+            donor: donor
           });
           return { pendingNudges: updatedNudges };
         });
@@ -133,7 +145,7 @@ class EventsPage extends Component {
     this.setState({ isLoading: true });
     console.log(this.context);
     const token = this.context.token;
-    fetch(this.state.hostUrl + '/api/Nudge/GetMyActiveNudges', {
+    fetch(this.state.hostUrl + 'api/Nudge/GetMyActiveNudges', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -164,7 +176,7 @@ class EventsPage extends Component {
     this.setState({ isLoading: true });
     console.log(this.context);
     const token = this.context.token;
-    fetch(this.state.hostUrl +'/api/Nudge/GetMyPendingNudges', {
+    fetch(this.state.hostUrl +'api/Nudge/GetMyPendingNudges', {
       method: 'GET',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With':'XMLHttpRequest', 'Authorization': 'Bearer ' + token},           
     })
@@ -195,7 +207,7 @@ class EventsPage extends Component {
     });
   };
 
-  bookEventHandler = () => {
+  acceptNudgeHandler = () => {
     if (!this.context.token) {
       this.setState({ selectedEvent: null });
       return;
@@ -248,6 +260,7 @@ class EventsPage extends Component {
       <React.Fragment>
         {(this.state.creating || this.state.selectedEvent) && <Backdrop />}
         {this.state.creating && (
+          <div className="d-flex justify-content-center">
           <Modal
             title="Add Nudge"
             canCancel
@@ -257,32 +270,35 @@ class EventsPage extends Component {
             confirmText="Confirm"
           >
             <form>
-              <div className="form-control">
+              <div className="form-group">
                 <label htmlFor="title">Title</label>
-                <input type="text" id="title" ref={this.titleElRef} />
+                <input type="text" className="form-control" id="title" placeholder="Enter title" ref={this.titleElRef}/>
+                <small id="emailHelp" className="form-text text-muted">We'll never share your email with anyone else.</small>
               </div>
-              <div className="form-control">
+              <div className="form-group">
                 <label htmlFor="title">Message</label>
-                <input type="text" id="title" ref={this.messageRef} />
+                <input type="text" className="form-control" id="message" ref={this.messageRef} />
               </div>
-              <div className="form-control">
+              <div className="form-group">
                 <label htmlFor="title">Category</label>
-                <input type="text" id="title" ref={this.categoryRef} />
+                <input type="text" className="form-control" id="category" ref={this.categoryRef} />
               </div>
-              <div className="form-control">
+              <div className="form-group">
                 <label htmlFor="price">Amount</label>
-                <input type="number" id="price" ref={this.amountRef} />
+                <input type="number" className="form-control" id="price" ref={this.amountRef} />
               </div>
-              <div className="form-control">
+              <div className="form-group">
                 <label htmlFor="date">Return Date</label>
-                <input type="datetime-local" id="date" ref={this.returnDateElRef} />
+                <input type="datetime-local"className="form-control" id="date" ref={this.returnDateElRef} />
               </div>
-              <div className="form-control">
-                <label htmlFor="title">Almsman</label>
-                <input type="text" id="title" ref={this.almsmanRef} />
+              {/* TODO this should be a searchable list of friends */}
+              <div className="form-group">
+                <label htmlFor="username">Donor username</label>
+                <input type="text" className="form-control" id="alm" ref={this.donorRef} />
               </div>
             </form>
           </Modal>
+          </div>
         )}
         {this.state.selectedEvent && (
           <div className="d-flex justify-content-center">
@@ -292,7 +308,7 @@ class EventsPage extends Component {
             canConfirm
             outgoing={this.state.selectedEvent.Donor.UserName != this.context.username}
             onCancel={this.modalCancelHandler}
-            onConfirm={this.bookEventHandler}
+            onConfirm={this.acceptNudgeHandler}
             confirmText={this.state.selectedEvent.Donor.UserName == this.context.username ? "Confirm nudge" : "Cancel Nudge"}
           >
             <h1>{this.state.selectedEvent.Title}</h1>
